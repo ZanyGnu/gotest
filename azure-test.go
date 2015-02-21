@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"os"
 	storage "github.com/MSOpenTech/azure-sdk-for-go/storage"
 )
 
 func getBlobClient() (*storage.BlobStorageClient, error) {
-	name := "zanygnutest"
-	key := "<Enter your key here>"
+	name := os.Getenv("STORAGE_ACCOUNT_NAME")
+	key := os.Getenv("STORAGE_KEY")
 	cli, err := storage.NewBasicClient(name, key)
 
 	if err != nil {
@@ -27,7 +28,7 @@ func main() {
 	}
 
 	cnt := "testcontainer"
-    ok, err := cli.ContainerExists(cnt)
+	ok, err := cli.ContainerExists(cnt)
 	if err != nil {
 		fmt.Printf("Error trying to check if container exists!\n")
 	}

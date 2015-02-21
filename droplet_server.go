@@ -3,13 +3,14 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	storage "github.com/MSOpenTech/azure-sdk-for-go/storage"
 	fb "github.com/huandu/facebook"
 )
 
 func getBlobClient() (*storage.BlobStorageClient, error) {
-	name := "zanygnutest"
-	key := "<key>"
+	name := os.Getenv("STORAGE_ACCOUNT_NAME")
+	key := os.Getenv("STORAGE_KEY")
 	cli, err := storage.NewBasicClient(name, key)
 
 	if err != nil {
