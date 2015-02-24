@@ -23,8 +23,11 @@ func main() {
 type Tutorial struct { 
     gorest.RestService `root:"/tutorial/" consumes:"application/json" produces:"application/json"` 
     hello   gorest.EndPoint `method:"GET" path:"/hello/" output:"string"`
+
     items   gorest.EndPoint `method:"GET" path:"/items/" output:"[]Item"`
-    insert  gorest.EndPoint `method:"POST" path:"/insert/" postdata:"int"`
+    insert  gorest.EndPoint `method:"POST" path:"/insert/" postdata:"[]Item"`
+
+    insertint  gorest.EndPoint `method:"POST" path:"/insertint/" postdata:"int"`
 }
 
 func(serv Tutorial) Hello() string{ 
@@ -44,7 +47,16 @@ func(serv Tutorial) Items() []Item{
     return slice
 }
 
-func(serv Tutorial) Insert(number int) { 
-    fmt.Println("Got a request to insert ")
-    serv.ResponseBuilder().SetResponseCode(200) 
+func(serv Tutorial) Insert(items []Item) {
+    fmt.Println("Got a request to insert items")
+    fmt.Println("Item Count", len(items))
+    serv.ResponseBuilder().SetResponseCode(200)
 }
+
+
+func(serv Tutorial) Insertint(number int) {
+    fmt.Println("Got a request to insert an int ")
+    serv.ResponseBuilder().SetResponseCode(200)
+}
+
+ 
