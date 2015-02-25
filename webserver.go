@@ -23,6 +23,8 @@ type Message struct {
 
 func main() {
     http.HandleFunc("/", handler)
+    // the following serves the files in ./static directory under the web path of localhost:8080/txt/
+    http.Handle("/txt/", http.FileServer(http.Dir("./static"))) 
     http.HandleFunc("/json/", jsonHandler)
     http.ListenAndServe(":8080", nil)
 }
