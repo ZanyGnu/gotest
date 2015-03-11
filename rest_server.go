@@ -24,6 +24,7 @@ type Tutorial struct {
     gorest.RestService `root:"/tutorial/" consumes:"application/json" produces:"application/json"` 
     hello   gorest.EndPoint `method:"GET" path:"/hello/" output:"string"`
 
+    item    gorest.EndPoint `method:"GET" path:"/item/{Id:int}" output:"Item"`
     items   gorest.EndPoint `method:"GET" path:"/items/" output:"[]Item"`
     insert  gorest.EndPoint `method:"POST" path:"/insert/" postdata:"[]Item"`
 
@@ -32,6 +33,13 @@ type Tutorial struct {
 
 func(serv Tutorial) Hello() string{ 
     return "Hello World" 
+}
+
+
+func(serv Tutorial) Item(Id int) Item{
+    serv.ResponseBuilder().SetResponseCode(200)
+    item := Item {IntId:Id, StringName:"Name with id returned", BoolValue:true}
+    return item
 }
 
 func(serv Tutorial) Items() []Item{
@@ -59,4 +67,3 @@ func(serv Tutorial) Insertint(number int) {
     serv.ResponseBuilder().SetResponseCode(200)
 }
 
- 
