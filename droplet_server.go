@@ -6,6 +6,7 @@ import (
 	"os"
 	storage "github.com/MSOpenTech/azure-sdk-for-go/storage"
 	fb "github.com/huandu/facebook"
+	"code.google.com/p/gorest" 
 )
 
 func getBlobClient() (*storage.BlobStorageClient, error) {
@@ -22,9 +23,11 @@ func getBlobClient() (*storage.BlobStorageClient, error) {
 
 
 func main() {
-    
-    setpHttpServer();
 
+    gorest.RegisterService(new(DropletServer)) 
+    http.Handle("/",gorest.Handle())     
+    http.ListenAndServe(":8080",nil) 
+    
     res, _ := fb.Get("/4", fb.Params{
         "fields": "username",
     })
@@ -48,25 +51,44 @@ func main() {
 	} else {
 		fmt.Printf("Containr not found");
 	}
+}
 
-	httpListenAndServe()
+type Droplet struct{
+    IntId             int
+    StringName        string
+    BoolValue         bool
+}
+
+type DropletServer struct { 
+    gorest.RestService `root:"/" consumes:"application/json" produces:"application/json"`     
+
+	item    gorest.EndPoint `method:"GET" path:"/item/{Id:int}" output:"Droplet"`
+    items   gorest.EndPoint `method:"GET" path:"/items/" output:"[]Droplet"`
+    insert  gorest.EndPoint `method:"POST" path:"/insert/" postdata:"[]Droplet"`
 }
 
 
-
-func handler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Hi there, page is %s!", r.URL.Path[1:])
+func(serv DropletServer) Item(Id int) Droplet {
+    serv.ResponseBuilder().SetResponseCode(200)
+    item := Droplet {IntId:Id, StringName:"Name with id returned", BoolValue:true}
+    return item
 }
 
-func jsonHandler(w http.ResponseWriter, r *http.Request) {
-    fmt.Fprintf(w, "Json page is %s!", r.URL.Path[1:])
+func(serv DropletServer) Items() []Droplet{
+    serv.ResponseBuilder().SetResponseCode(200)
+    slice := []Droplet{
+      Droplet {IntId:0, StringName:"Name 0", BoolValue:true},
+      Droplet {IntId:1, StringName:"Name 1", BoolValue:true},
+    }
+
+    item := Droplet {IntId:200, StringName:"Name 4", BoolValue:true}
+    slice = append(slice, item)
+
+    return slice
 }
 
-func setpHttpServer() {
-    http.HandleFunc("/", handler)
-    http.HandleFunc("/json/", jsonHandler)
-}
-
-func httpListenAndServe() {
-	http.ListenAndServe(":8080", nil)
+func(serv DropletServer) Insert(items []Droplet) {
+    fmt.Println("Got a request to insert items")
+    fmt.Println("Item Count", len(items))
+    serv.ResponseBuilder().SetResponseCode(200)
 }
