@@ -5,7 +5,9 @@ import (
 	"os"
 	"bytes"
 	"crypto/rand"
-	storage "github.com/MSOpenTech/azure-sdk-for-go/storage"
+	"io/ioutil"
+	"reflect"
+	storage "github.com/MSOpenTech/azure-sdk-for-go/storage"	
 )
 
 func getBlobClient() (*storage.BlobStorageClient, error) {
@@ -47,10 +49,13 @@ func main() {
 func blob_operations(cli *storage.BlobStorageClient) {
 	cnt := "testcontainer"
 	blob := "testblob-" + randString(10);
-	body := []byte(randString(1024))
+	body := []byte(randString(64))
+
+	fmt.Print("Creating blob ", blob,  " and putting contents into it ", body)
 
 	// Create the blob and add contents to it
 	err := cli.PutBlockBlob(cnt, blob, bytes.NewReader(body))
+
 
 	// Validate that the blob exists
 	ok, err := cli.BlobExists(cnt, blob)
@@ -63,6 +68,28 @@ func blob_operations(cli *storage.BlobStorageClient) {
 	} else {
 		fmt.Printf("Blob not found");
 	}
+
+
+	// Validate that the contents of the blob are as expected
+
+	resp, err := cli.GetBlob(cnt, blob)
+	if err != nil {
+		fmt.Printf("Error trying to check blob contents!\n")
+	}
+
+	// Verify contents
+	respBody, err := ioutil.ReadAll(resp)
+	defer resp.Close()
+	if err != nil {
+		fmt.Printf("Error trying to get blob contents!\n")
+	}
+
+	if !reflect.DeepEqual(body, respBody) {
+		fmt.Printf("Wrong blob contents.\nExpected: %d bytes, Got: %d byes", len(body), len(respBody))
+	}
+
+	fmt.Print("Validated that blob ", blob, " has contents: ", resp)
+
 }
 
 func randString(n int) string {
