@@ -4,23 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"io/ioutil"
 	storage "github.com/MSOpenTech/azure-sdk-for-go/storage"
 	fb "github.com/huandu/facebook"
 	"code.google.com/p/gorest" 
 )
-
-func getBlobClient() (*storage.BlobStorageClient, error) {
-	name := os.Getenv("STORAGE_ACCOUNT_NAME")
-	key := os.Getenv("STORAGE_KEY")
-	cli, err := storage.NewBasicClient(name, key)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return cli.GetBlobService(), nil
-}
-
 
 func main() {
 
@@ -33,24 +21,6 @@ func main() {
     })
     fmt.Println("here is my facebook username:", res["username"])
 
-    cli, err := getBlobClient()
-
-   	if err != nil {
-		fmt.Printf("Error trying to check if container exists!\n")
-		return
-	}
-
-	cnt := "testcontainer"
-	ok, err := cli.ContainerExists(cnt)
-	if err != nil {
-		fmt.Printf("Error trying to check if container exists!\n")
-	}
-
-	if ok {
-		fmt.Printf("Found container!\n")
-	} else {
-		fmt.Printf("Containr not found");
-	}
 }
 
 type Droplet struct{
@@ -65,6 +35,7 @@ type DropletServer struct {
 	item    gorest.EndPoint `method:"GET" path:"/item/{Id:int}" output:"Droplet"`
     items   gorest.EndPoint `method:"GET" path:"/items/" output:"[]Droplet"`
     insert  gorest.EndPoint `method:"POST" path:"/insert/" postdata:"[]Droplet"`
+    getDroplet    gorest.EndPoint `method:"GET" path:"/d/{userName:string}/{dropletName:string}" output:"Droplet"`
 }
 
 
@@ -91,4 +62,48 @@ func(serv DropletServer) Insert(items []Droplet) {
     fmt.Println("Got a request to insert items")
     fmt.Println("Item Count", len(items))
     serv.ResponseBuilder().SetResponseCode(200)
+}
+
+var blobClient *storage.BlobStorageClient
+
+func(serv DropletServer) GetDroplet(userName string, dropletName string) Droplet {
+    serv.ResponseBuilder().SetResponseCode(200)
+
+    if blobClient == nil {
+    	err := initializeBlobClient()
+    	 if err != nil {
+    		return Droplet {0,"Blob Client was null",false}
+    	}
+    }
+
+    resp, err := blobClient.GetBlob(userName, dropletName)
+	if err != nil {
+		fmt.Printf("Error trying to check blob contents!\n")
+	}
+
+	// Verify contents
+	respBody, err := ioutil.ReadAll(resp)
+	defer resp.Close()
+	if err != nil {
+		fmt.Printf("Error trying to get blob contents!\n")
+	}
+
+	contents := string(respBody[:len(respBody)])
+
+    item := Droplet {IntId:100, StringName:contents, BoolValue:true}
+    return item
+}
+
+
+func initializeBlobClient() (error) {
+	name := os.Getenv("STORAGE_ACCOUNT_NAME")
+	key := os.Getenv("STORAGE_KEY")
+	cli, err := storage.NewBasicClient(name, key)
+
+	if err != nil {
+		return err		
+	}
+
+	blobClient = cli.GetBlobService()
+	return nil
 }
