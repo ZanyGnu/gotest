@@ -49,9 +49,10 @@ func main() {
 func blob_operations(cli *storage.BlobStorageClient) {
 	cnt := "testcontainer"
 	blob := "testblob-" + randString(10);
-	body := []byte(randString(64))
+	originalContents := randString(64)
+	body := []byte(originalContents)
 
-	fmt.Print("Creating blob ", blob,  " and putting contents into it ", body)
+	fmt.Print("Creating blob ", blob,  " and putting contents into it ", originalContents)
 
 	// Create the blob and add contents to it
 	err := cli.PutBlockBlob(cnt, blob, bytes.NewReader(body))
@@ -85,10 +86,12 @@ func blob_operations(cli *storage.BlobStorageClient) {
 	}
 
 	if !reflect.DeepEqual(body, respBody) {
-		fmt.Printf("Wrong blob contents.\nExpected: %d bytes, Got: %d byes", len(body), len(respBody))
+		fmt.Printf("Wrong blob contents.\nExpected: %d bytes, Got: %d bytes", len(body), len(respBody))
 	}
 
-	fmt.Print("Validated that blob ", blob, " has contents: ", resp)
+	contents := string(respBody[:len(respBody)])
+
+	fmt.Print("Validated that blob ", blob, " has contents: ", contents)
 
 }
 
