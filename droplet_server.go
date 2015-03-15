@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"io/ioutil"
+	"bytes"
 	storage "github.com/MSOpenTech/azure-sdk-for-go/storage"
 	fb "github.com/huandu/facebook"
 	"code.google.com/p/gorest" 
@@ -24,9 +25,8 @@ func main() {
 }
 
 type Droplet struct{
-    IntId             int
-    StringName        string
-    BoolValue         bool
+    Id             int
+    Content        string
 }
 
 type DropletServer struct { 
@@ -35,24 +35,25 @@ type DropletServer struct {
 	item    gorest.EndPoint `method:"GET" path:"/item/{Id:int}" output:"Droplet"`
     items   gorest.EndPoint `method:"GET" path:"/items/" output:"[]Droplet"`
     insert  gorest.EndPoint `method:"POST" path:"/insert/" postdata:"[]Droplet"`
-    getDroplet    gorest.EndPoint `method:"GET" path:"/d/{userName:string}/{dropletName:string}" output:"Droplet"`
+    getDroplet    gorest.EndPoint `method:"GET" 	path:"/d/{userName:string}/{dropletName:string}" output:"Droplet"`
+    putDroplet    gorest.EndPoint `method:"POST" 	path:"/d/{userName:string}/{dropletName:string}" postdata:"Droplet"`
 }
 
 
 func(serv DropletServer) Item(Id int) Droplet {
     serv.ResponseBuilder().SetResponseCode(200)
-    item := Droplet {IntId:Id, StringName:"Name with id returned", BoolValue:true}
+    item := Droplet {Id:Id, Content:"Name with id returned"}
     return item
 }
 
 func(serv DropletServer) Items() []Droplet{
     serv.ResponseBuilder().SetResponseCode(200)
     slice := []Droplet{
-      Droplet {IntId:0, StringName:"Name 0", BoolValue:true},
-      Droplet {IntId:1, StringName:"Name 1", BoolValue:true},
+      Droplet {Id:0, Content:"Name 0"},
+      Droplet {Id:1, Content:"Name 1"},
     }
 
-    item := Droplet {IntId:200, StringName:"Name 4", BoolValue:true}
+    item := Droplet {Id:200, Content:"Name 4"}
     slice = append(slice, item)
 
     return slice
@@ -72,7 +73,7 @@ func(serv DropletServer) GetDroplet(userName string, dropletName string) Droplet
     if blobClient == nil {
     	err := initializeBlobClient()
     	 if err != nil {
-    		return Droplet {0,"Blob Client was null",false}
+    		return Droplet {0,"Blob Client was null"}
     	}
     }
 
@@ -90,8 +91,27 @@ func(serv DropletServer) GetDroplet(userName string, dropletName string) Droplet
 
 	contents := string(respBody[:len(respBody)])
 
-    item := Droplet {IntId:100, StringName:contents, BoolValue:true}
+    item := Droplet {Id:100, Content:contents}
     return item
+}
+
+func(serv DropletServer) PutDroplet(droplet Droplet, userName string, dropletName string)  {
+    
+    if blobClient == nil {
+    	err := initializeBlobClient()
+    	 if err != nil {
+    		return;
+    	}
+    }
+
+    // Create the blob and add contents to it
+	err := blobClient.PutBlockBlob(userName, dropletName, bytes.NewReader([]byte(droplet.Content)))
+
+	if err == nil {
+		serv.ResponseBuilder().SetResponseCode(200)
+	} else {
+		serv.ResponseBuilder().SetResponseCode(500)
+	}
 }
 
 
