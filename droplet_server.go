@@ -36,6 +36,7 @@ type DropletServer struct {
     items   gorest.EndPoint `method:"GET" path:"/items/" output:"[]Droplet"`
     insert  gorest.EndPoint `method:"POST" path:"/insert/" postdata:"[]Droplet"`
     getDroplet    gorest.EndPoint `method:"GET" 	path:"/d/{userName:string}/{dropletName:string}" output:"Droplet"`
+    getDroplets   gorest.EndPoint `method:"GET" 	path:"/d/{userName:string}" output:"[]Droplet"`
     putDroplet    gorest.EndPoint `method:"POST" 	path:"/d/{userName:string}/{dropletName:string}" postdata:"Droplet"`
 }
 
@@ -67,33 +68,94 @@ func(serv DropletServer) Insert(items []Droplet) {
 
 var blobClient *storage.BlobStorageClient
 
+func(serv DropletServer) GetDroplets(userName string) []Droplet {
+	if blobClient == nil {
+    	err := initializeBlobClient()
+    	 if err != nil {
+    		
+    	}
+    }
+
+	droplets := []Droplet{}
+	marker := ""
+	for {
+		resp, err := blobClient.ListBlobs(userName, storage.ListBlobsParameters{
+			MaxResults: 1024,
+			Marker:     marker})
+		if err != nil {
+			serv.ResponseBuilder().SetResponseCode(500)
+			return []Droplet{}
+		}
+
+		for _, v := range resp.Blobs {
+
+			fmt.Printf(v.Name)
+			err, droplet := getDropletItem(userName, v.Name)
+
+		    if err != nil {
+		    	serv.ResponseBuilder().SetResponseCode(500)
+		    	return nil
+		    }
+
+			droplets = append(droplets, droplet)
+		}
+
+		marker = resp.NextMarker
+
+		if marker == "" || len(resp.Blobs) == 0 {
+			break
+		}
+	}
+
+	return droplets;	
+}
+
 func(serv DropletServer) GetDroplet(userName string, dropletName string) Droplet {
     serv.ResponseBuilder().SetResponseCode(200)
 
     if blobClient == nil {
     	err := initializeBlobClient()
     	 if err != nil {
-    		return Droplet {0,"Blob Client was null"}
+    	 	serv.ResponseBuilder().SetResponseCode(500)
+    		return Droplet{}
     	}
     }
 
+    err, droplet := getDropletItem(userName, dropletName)
+
+    if err != nil {
+    	serv.ResponseBuilder().SetResponseCode(500)
+    	return Droplet{}
+    }
+
+    return droplet
+}
+
+func getDropletItem(userName string, dropletName string) (error, Droplet) {
+
     resp, err := blobClient.GetBlob(userName, dropletName)
+
 	if err != nil {
 		fmt.Printf("Error trying to check blob contents!\n")
+		return err, Droplet{}
 	}
 
-	// Verify contents
 	respBody, err := ioutil.ReadAll(resp)
+	
 	defer resp.Close()
+
 	if err != nil {
 		fmt.Printf("Error trying to get blob contents!\n")
+		return err, Droplet{}
 	}
 
 	contents := string(respBody[:len(respBody)])
 
     item := Droplet {Id:100, Content:contents}
-    return item
+
+    return nil, item
 }
+
 
 func(serv DropletServer) PutDroplet(droplet Droplet, userName string, dropletName string)  {
     
