@@ -26,6 +26,7 @@ func main() {
 
 type Droplet struct{
     Id             int
+    Name           string
     Content        string
 }
 
@@ -38,6 +39,7 @@ type DropletServer struct {
     getDroplet    gorest.EndPoint `method:"GET" 	path:"/d/{userName:string}/{dropletName:string}" output:"Droplet"`
     getDroplets   gorest.EndPoint `method:"GET" 	path:"/d/{userName:string}" output:"[]Droplet"`
     putDroplet    gorest.EndPoint `method:"POST" 	path:"/d/{userName:string}/{dropletName:string}" postdata:"Droplet"`
+    putDroplets   gorest.EndPoint `method:"POST" 	path:"/d/{userName:string}" postdata:"[]Droplet"`
 }
 
 
@@ -89,7 +91,7 @@ func(serv DropletServer) GetDroplets(userName string) []Droplet {
 
 		for _, v := range resp.Blobs {
 
-			fmt.Printf(v.Name)
+			fmt.Println("getDroplets: ", v.Name)
 			err, droplet := getDropletItem(userName, v.Name)
 
 		    if err != nil {
@@ -136,7 +138,7 @@ func getDropletItem(userName string, dropletName string) (error, Droplet) {
     resp, err := blobClient.GetBlob(userName, dropletName)
 
 	if err != nil {
-		fmt.Printf("Error trying to check blob contents!\n")
+		fmt.Println("getDropletItem: Error trying to check blob contents!\n")
 		return err, Droplet{}
 	}
 
@@ -145,13 +147,13 @@ func getDropletItem(userName string, dropletName string) (error, Droplet) {
 	defer resp.Close()
 
 	if err != nil {
-		fmt.Printf("Error trying to get blob contents!\n")
+		fmt.Println("getDropletItem: Error trying to get blob contents!\n")
 		return err, Droplet{}
 	}
 
 	contents := string(respBody[:len(respBody)])
 
-    item := Droplet {Id:100, Content:contents}
+    item := Droplet {Id:100, Name:dropletName, Content:contents}
 
     return nil, item
 }
@@ -159,15 +161,8 @@ func getDropletItem(userName string, dropletName string) (error, Droplet) {
 
 func(serv DropletServer) PutDroplet(droplet Droplet, userName string, dropletName string)  {
     
-    if blobClient == nil {
-    	err := initializeBlobClient()
-    	 if err != nil {
-    		return;
-    	}
-    }
-
     // Create the blob and add contents to it
-	err := blobClient.PutBlockBlob(userName, dropletName, bytes.NewReader([]byte(droplet.Content)))
+	err := putDropletItem(userName, droplet.Name, droplet)
 
 	if err == nil {
 		serv.ResponseBuilder().SetResponseCode(200)
@@ -175,6 +170,44 @@ func(serv DropletServer) PutDroplet(droplet Droplet, userName string, dropletNam
 		serv.ResponseBuilder().SetResponseCode(500)
 	}
 }
+
+func putDropletItem(userName string, dropletName string, droplet Droplet) (error) {
+	if blobClient == nil {
+    	err := initializeBlobClient()
+    	 if err != nil {
+    	 	fmt.Println("putDropletItem: ", err)
+    		return err;
+    	}
+    }
+
+    // Create the blob and add contents to it
+	return blobClient.PutBlockBlob(userName, dropletName, bytes.NewReader([]byte(droplet.Content)))
+}
+
+func(serv DropletServer) PutDroplets(droplets []Droplet, userName string)  {
+    
+    if blobClient == nil {
+    	err := initializeBlobClient()
+    	 if err != nil {
+    	 	fmt.Println("PutDroplets: ", err)
+    		return;
+    	}
+    }
+
+    for _, droplet := range droplets { 
+    	fmt.Println("PutDroplets: Processing ", droplet.Name)
+	    err := putDropletItem(userName, droplet.Name, droplet)
+
+		if err != nil {
+			fmt.Println("PutDroplets: Error ", err)
+			serv.ResponseBuilder().SetResponseCode(500)
+			return
+		}
+	}
+
+	serv.ResponseBuilder().SetResponseCode(200)
+}
+
 
 
 func initializeBlobClient() (error) {
