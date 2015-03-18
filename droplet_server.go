@@ -25,7 +25,6 @@ func main() {
 }
 
 type Droplet struct{
-    Id             int
     Name           string
     Content        string
 }
@@ -33,39 +32,10 @@ type Droplet struct{
 type DropletServer struct { 
     gorest.RestService `root:"/" consumes:"application/json" produces:"application/json"`     
 
-	item    gorest.EndPoint `method:"GET" path:"/item/{Id:int}" output:"Droplet"`
-    items   gorest.EndPoint `method:"GET" path:"/items/" output:"[]Droplet"`
-    insert  gorest.EndPoint `method:"POST" path:"/insert/" postdata:"[]Droplet"`
     getDroplet    gorest.EndPoint `method:"GET" 	path:"/d/{userName:string}/{dropletName:string}" output:"Droplet"`
     getDroplets   gorest.EndPoint `method:"GET" 	path:"/d/{userName:string}" output:"[]Droplet"`
     putDroplet    gorest.EndPoint `method:"POST" 	path:"/d/{userName:string}/{dropletName:string}" postdata:"Droplet"`
     putDroplets   gorest.EndPoint `method:"POST" 	path:"/d/{userName:string}" postdata:"[]Droplet"`
-}
-
-
-func(serv DropletServer) Item(Id int) Droplet {
-    serv.ResponseBuilder().SetResponseCode(200)
-    item := Droplet {Id:Id, Content:"Name with id returned"}
-    return item
-}
-
-func(serv DropletServer) Items() []Droplet{
-    serv.ResponseBuilder().SetResponseCode(200)
-    slice := []Droplet{
-      Droplet {Id:0, Content:"Name 0"},
-      Droplet {Id:1, Content:"Name 1"},
-    }
-
-    item := Droplet {Id:200, Content:"Name 4"}
-    slice = append(slice, item)
-
-    return slice
-}
-
-func(serv DropletServer) Insert(items []Droplet) {
-    fmt.Println("Got a request to insert items")
-    fmt.Println("Item Count", len(items))
-    serv.ResponseBuilder().SetResponseCode(200)
 }
 
 var blobClient *storage.BlobStorageClient
@@ -153,7 +123,7 @@ func getDropletItem(userName string, dropletName string) (error, Droplet) {
 
 	contents := string(respBody[:len(respBody)])
 
-    item := Droplet {Id:100, Name:dropletName, Content:contents}
+    item := Droplet {Name:dropletName, Content:contents}
 
     return nil, item
 }
