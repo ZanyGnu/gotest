@@ -131,8 +131,11 @@ func getDropletItem(userName string, dropletName string) (error, Droplet) {
 
 func(serv DropletServer) PutDroplet(droplet Droplet, userName string, dropletName string)  {
     
+    err := serv.createContainerIfNotExists(userName)
+    if err != nil { return }
+
     // Create the blob and add contents to it
-	err := putDropletItem(userName, droplet.Name, droplet)
+	err = putDropletItem(userName, droplet.Name, droplet)
 
 	if err == nil {
 		serv.ResponseBuilder().SetResponseCode(200)
@@ -164,6 +167,9 @@ func(serv DropletServer) PutDroplets(droplets []Droplet, userName string)  {
     	}
     }
 
+    err := serv.createContainerIfNotExists(userName)
+    if err != nil { return }
+
     for _, droplet := range droplets { 
     	fmt.Println("PutDroplets: Processing ", droplet.Name)
 	    err := putDropletItem(userName, droplet.Name, droplet)
@@ -178,7 +184,18 @@ func(serv DropletServer) PutDroplets(droplets []Droplet, userName string)  {
 	serv.ResponseBuilder().SetResponseCode(200)
 }
 
+func(serv DropletServer) createContainerIfNotExists(containerName string) (error) {
 
+    ok, err := blobClient.CreateContainerIfNotExists(containerName, storage.ContainerAccessTypePrivate)
+
+    if err != nil || ok != true {
+    	fmt.Println("PutDroplets: Error ", err)
+		serv.ResponseBuilder().SetResponseCode(500)
+		return err
+	}
+
+	return nil
+}
 
 func initializeBlobClient() (error) {
 	name := os.Getenv("STORAGE_ACCOUNT_NAME")
